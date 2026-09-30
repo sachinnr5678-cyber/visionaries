@@ -197,14 +197,17 @@ Return valid JSON adhering strictly to this schema:
   async resolveEntities(rawConcepts: RawExtractedConcept[]): Promise<CanonicalConcept[]> {
     if (rawConcepts.length === 0) return [];
 
-    // Group by normalized name (lowercased, punctuation-trimmed, singular)
+    // Group by normalized name (lowercased, punctuation-trimmed, safe singular)
     const groups = new Map<string, RawExtractedConcept[]>();
     for (const c of rawConcepts) {
-      const key = c.name
+      let key = c.name
         .toLowerCase()
         .trim()
-        .replace(/^(the|a|an)\s+/i, '')
-        .replace(/s$/, ''); // basic singularize
+        .replace(/^(the|a|an)\s+/i, '');
+      // Only strip genuine regular plural trailing 's' (not ss, is, us, cs, etc.)
+      if (key.length > 4 && !/(?:ss|is|us|cs|as)$/i.test(key) && key.endsWith('s')) {
+        key = key.slice(0, -1);
+      }
       const existing = groups.get(key) || [];
       existing.push(c);
       groups.set(key, existing);

@@ -19,12 +19,14 @@ interface MapsDirectoryProps {
   onSelectMap: (graph: KnowledgeGraphData) => void;
   onNewMap: () => void;
   onBackToGraph: () => void;
+  userMaps?: KnowledgeGraphData[];
 }
 
 export default function MapsDirectory({
   onSelectMap,
   onNewMap,
   onBackToGraph,
+  userMaps = [],
 }: MapsDirectoryProps) {
   return (
     <div className="min-h-screen bg-[#050816] text-[#F8FAFC] p-6 sm:p-10 stem-grid-bg">
@@ -66,6 +68,66 @@ export default function MapsDirectory({
 
         {/* Maps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-8">
+          {/* Real Extracted User Maps */}
+          {userMaps.map((map) => (
+            <div
+              key={map.id}
+              onClick={() => onSelectMap(map)}
+              className="glass-panel-elevated rounded-3xl p-6 border border-[#22D3EE]/30 hover:border-[#22D3EE] cursor-pointer transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between group shadow-lg shadow-[#22D3EE]/10"
+            >
+              <div>
+                {/* Header Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#22D3EE]/20 text-[#22D3EE] border border-[#22D3EE]/40 font-bold">
+                    YOUR AI EXTRACTION
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    {map.sourceDocument}
+                  </span>
+                </div>
+
+                {/* Miniature Graph Visual Wireframe */}
+                <div className="h-32 rounded-2xl bg-[#050816] border border-[#22D3EE]/20 mb-4 relative overflow-hidden flex items-center justify-center p-4 group-hover:border-[#22D3EE]/50 transition-colors">
+                  <div className="absolute inset-0 stem-grid-bg opacity-40" />
+                  <div className="flex items-center gap-2.5 relative z-10">
+                    <div className="w-8 h-8 rounded-full bg-[#22D3EE]/25 border border-[#22D3EE]/60 flex items-center justify-center text-[10px] text-white font-mono shadow-md">
+                      AI
+                    </div>
+                    <div className="w-8 h-[2px] bg-gradient-to-r from-[#22D3EE] to-[#8B5CF6]" />
+                    <div className="w-9 h-9 rounded-full bg-[#8B5CF6]/30 border border-[#8B5CF6]/70 flex items-center justify-center text-[11px] text-white font-bold shadow-lg shadow-[#8B5CF6]/30">
+                      PDF
+                    </div>
+                    <div className="w-8 h-[2px] bg-gradient-to-r from-[#8B5CF6] to-[#34D399]" />
+                    <div className="w-8 h-8 rounded-full bg-[#34D399]/25 border border-[#34D399]/60 flex items-center justify-center text-[10px] text-white font-mono shadow-md">
+                      KG
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-base font-bold text-white group-hover:text-[#22D3EE] transition-colors leading-snug">
+                  {map.title}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 font-mono line-clamp-2">
+                  {map.subtitle}
+                </p>
+              </div>
+
+              {/* Stats Footer */}
+              <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
+                <div className="flex items-center gap-3 font-mono text-[11px]">
+                  <span>{map.nodes.length} Concepts</span>
+                  <span>•</span>
+                  <span>{map.edges.length} Relations</span>
+                </div>
+                <div className="flex items-center gap-1 text-[#22D3EE] font-semibold group-hover:translate-x-1 transition-transform">
+                  <span>Open Map</span>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Preloaded Curricula Samples */}
           {samplePreloadedChapters.map((item) => (
             <div
               key={item.id}

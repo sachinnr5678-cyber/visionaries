@@ -298,11 +298,11 @@ def build_knowledge_graph(doc_name, pages_data, sections_data, ai_result):
         deg = degree.get(c["id"], 0)
         calc_importance = min(10, max(5, int(5 + c["occurrences"] * 0.8 + deg * 0.7)))
         
-        angle = (idx / max(1, total)) * 2 * math.pi + (random.random() - 0.5) * 0.2
-        radius = 170 + (10 - calc_importance) * 35
+        angle = (idx / max(1, total)) * 2 * math.pi + (random.random() - 0.5) * 0.15
+        radius = 280 + (10 - calc_importance) * 25 + ((idx % 3) * 55)
         x = math.cos(angle) * radius
         y = math.sin(angle) * radius
-        z = ((idx % 5) - 2) * 22
+        z = math.sin(angle * 2) * 45 + ((idx % 3) - 1) * 25
         
         # Category classification
         lower = c["label"].lower()

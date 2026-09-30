@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Concept, Relationship } from '@/types/graph';
-import { Sparkles, Layers, ArrowRight, GitCommit } from 'lucide-react';
+import { Sparkles, Layers, ArrowRight, GitCommit, Cpu, Zap, Share2, Compass } from 'lucide-react';
 
 interface Graph2DProps {
   nodes: Concept[];
@@ -73,15 +73,60 @@ export default function Graph2D({
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [nodeDragOffset, setNodeDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Initialize node positions based on preset data
+  // Initialize node positions with collision-free physical separation
   useEffect(() => {
     const initialPos: Record<string, { x: number; y: number }> = {};
-    nodes.forEach((n) => {
-      initialPos[n.id] = {
-        x: (n.x || 0) * 1.5,
-        y: (n.y || 0) * 1.3,
-      };
+    const nList = [...nodes];
+    
+    nList.forEach((n, idx) => {
+      if (n.x !== undefined && n.y !== undefined && (n.x !== 0 || n.y !== 0)) {
+        initialPos[n.id] = {
+          x: n.x * 1.15,
+          y: n.y * 1.15,
+        };
+      } else {
+        const theta = (idx / Math.max(1, nList.length)) * 2 * Math.PI;
+        const rad = 280 + (idx % 3) * 60;
+        initialPos[n.id] = {
+          x: Math.cos(theta) * rad,
+          y: Math.sin(theta) * rad,
+        };
+      }
     });
+
+    // Anti-collision relaxation: enforce minimum 240px separation between all node cards
+    const MIN_DIST = 240;
+    for (let step = 0; step < 40; step++) {
+      for (let i = 0; i < nList.length; i++) {
+        for (let j = i + 1; j < nList.length; j++) {
+          const idA = nList[i].id;
+          const idB = nList[j].id;
+          const posA = initialPos[idA];
+          const posB = initialPos[idB];
+          if (!posA || !posB) continue;
+
+          let dx = posB.x - posA.x;
+          let dy = posB.y - posA.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 1e-3) {
+            dx = (Math.random() - 0.5) * 10;
+            dy = (Math.random() - 0.5) * 10;
+            dist = Math.sqrt(dx * dx + dy * dy);
+          }
+
+          if (dist < MIN_DIST) {
+            const overlap = (MIN_DIST - dist) * 0.5;
+            const pushX = (dx / dist) * overlap;
+            const pushY = (dy / dist) * overlap;
+            posA.x -= pushX;
+            posA.y -= pushY;
+            posB.x += pushX;
+            posB.y += pushY;
+          }
+        }
+      }
+    }
+
     setNodePositions(initialPos);
   }, [nodes]);
 
@@ -161,6 +206,29 @@ export default function Graph2D({
           style={{ transform: 'translate(3000px, 3000px)' }}
         >
           <defs>
+            <style>
+              {`
+                @keyframes flowLineAnimation {
+                  from { stroke-dashoffset: 42; }
+                  to { stroke-dashoffset: 0; }
+                }
+                .flow-dashes {
+                  stroke-dasharray: 8 6;
+                  animation: flowLineAnimation 1.6s linear infinite;
+                }
+                .flow-dashes-active {
+                  stroke-dasharray: 10 5;
+                  animation: flowLineAnimation 0.8s linear infinite;
+                }
+              `}
+            </style>
+            <filter id="packet-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
             <marker
               id="arrow-marker"
               viewBox="0 0 10 10"
@@ -213,27 +281,53 @@ export default function Graph2D({
                   d={pathString}
                   fill="none"
                   stroke="transparent"
-                  strokeWidth="16"
+                  strokeWidth="20"
                   onClick={() => onSelectRelationship(edge)}
                 />
 
-                {/* Visible curved stroke */}
+                {/* Visible curved stroke with flowing dashed motion */}
                 <path
                   d={pathString}
                   fill="none"
-                  stroke={isConnected ? '#22D3EE' : '#6C63FF'}
-                  strokeWidth={isConnected ? '2.5' : '1.5'}
-                  strokeOpacity={isDimmed ? 0.15 : isConnected ? 0.95 : 0.45}
-                  strokeDasharray={isConnected ? 'none' : '4 4'}
+                  stroke={isConnected ? '#22D3EE' : '#6366F1'}
+                  strokeWidth={isConnected ? '3' : '1.8'}
+                  strokeOpacity={isDimmed ? 0.15 : isConnected ? 1 : 0.55}
                   markerEnd={isConnected ? 'url(#arrow-active)' : 'url(#arrow-marker)'}
-                  className="transition-all duration-200"
+                  className={isConnected ? 'flow-dashes-active transition-all' : 'flow-dashes transition-all'}
                 />
+
+                {/* Animated Luminous Traveling Energy Packets (Connection Flow) */}
+                <circle
+                  r={isConnected ? '5' : '3.6'}
+                  fill={isConnected ? '#22D3EE' : '#38BDF8'}
+                  filter="url(#packet-glow)"
+                  opacity={isDimmed ? 0.2 : 0.95}
+                >
+                  <animateMotion
+                    dur={isConnected ? '2s' : '3s'}
+                    repeatCount="indefinite"
+                    path={pathString}
+                  />
+                </circle>
+                <circle
+                  r={isConnected ? '4' : '2.8'}
+                  fill="#A855F7"
+                  filter="url(#packet-glow)"
+                  opacity={isDimmed ? 0.15 : 0.85}
+                >
+                  <animateMotion
+                    dur={isConnected ? '2s' : '3s'}
+                    begin={isConnected ? '1s' : '1.5s'}
+                    repeatCount="indefinite"
+                    path={pathString}
+                  />
+                </circle>
 
                 {/* Relationship label on curve midpoint */}
                 <foreignObject
-                  x={(p1.x + p2.x) / 2 - 45}
+                  x={(p1.x + p2.x) / 2 - 58}
                   y={(p1.y + p2.y) / 2 - 14}
-                  width="90"
+                  width="116"
                   height="28"
                   className="pointer-events-auto"
                 >
@@ -242,15 +336,16 @@ export default function Graph2D({
                       e.stopPropagation();
                       onSelectRelationship(edge);
                     }}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono text-center truncate border transition-all cursor-pointer shadow-md ${
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono flex items-center justify-center gap-1 border transition-all cursor-pointer shadow-md ${
                       isConnected
-                        ? 'bg-[#22D3EE]/25 text-[#22D3EE] border-[#22D3EE]/60 font-semibold'
+                        ? 'bg-[#22D3EE]/25 text-[#22D3EE] border-[#22D3EE]/70 font-semibold shadow-lg shadow-[#22D3EE]/20'
                         : isDimmed
                         ? 'opacity-20 bg-black text-slate-500 border-white/5'
-                        : 'bg-[#0B1020]/90 text-slate-300 border-white/10 hover:border-[#6C63FF]/60 hover:text-white'
+                        : 'bg-[#0B1020]/95 text-slate-300 border-white/10 hover:border-[#6C63FF]/60 hover:text-white backdrop-blur-md'
                     }`}
                   >
-                    {edge.relation}
+                    <span className="truncate">{edge.relation}</span>
+                    <ArrowRight className="w-2.5 h-2.5 text-[#22D3EE] shrink-0" />
                   </div>
                 </foreignObject>
               </g>
@@ -277,9 +372,27 @@ export default function Graph2D({
             !isConnected;
 
           const theme = CATEGORY_COLORS[node.category] || CATEGORY_COLORS['core-math'];
+          const sizeScale = 0.95 + (node.importance / 10) * 0.25;
 
-          // Node width and height based on importance
-          const sizeScale = 0.9 + (node.importance / 10) * 0.3;
+          const connCount = edges.filter(
+            (e) => e.source === node.id || e.target === node.id
+          ).length;
+
+          // Category icon selector
+          const renderCategoryIcon = () => {
+            switch (node.category) {
+              case 'transforms':
+                return <Layers className="w-3 h-3" />;
+              case 'optimization':
+                return <Zap className="w-3 h-3" />;
+              case 'deep-learning':
+                return <Cpu className="w-3 h-3" />;
+              case 'ml-bridge':
+                return <Share2 className="w-3 h-3" />;
+              default:
+                return <GitCommit className="w-3 h-3" />;
+            }
+          };
 
           return (
             <div
@@ -301,23 +414,28 @@ export default function Graph2D({
               }}
             >
               <div
-                className="relative rounded-2xl px-4 py-3 min-w-[140px] max-w-[200px] glass-panel-elevated border flex flex-col items-center text-center shadow-xl group"
+                className="relative rounded-2xl p-3.5 min-w-[150px] max-w-[210px] glass-panel-elevated border flex flex-col items-center text-center shadow-xl group overflow-hidden"
                 style={{
-                  backgroundColor: isSelected ? 'rgba(15, 23, 46, 0.96)' : theme.fill,
+                  backgroundColor: isSelected ? 'rgba(15, 23, 46, 0.98)' : theme.fill,
                   borderColor: isSelected ? '#22D3EE' : isHovered ? theme.text : theme.border,
                   boxShadow: isSelected
-                    ? `0 0 25px ${theme.glow}, 0 10px 30px rgba(0,0,0,0.8)`
+                    ? `0 0 30px ${theme.glow}, 0 10px 30px rgba(0,0,0,0.85)`
                     : isHovered
-                    ? `0 0 18px ${theme.glow}`
+                    ? `0 0 20px ${theme.glow}`
                     : '0 8px 24px rgba(0,0,0,0.5)',
                 }}
               >
-                {/* Node category mini tag */}
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: theme.text }}
-                  />
+                {/* Luminous Top Color Strip */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-[3px]"
+                  style={{ backgroundColor: theme.text }}
+                />
+
+                {/* Node category mini tag with STEM Icon */}
+                <div className="flex items-center gap-1.5 mb-1.5 pt-0.5">
+                  <span style={{ color: theme.text }}>
+                    {renderCategoryIcon()}
+                  </span>
                   <span
                     className="text-[9px] font-mono uppercase tracking-wider font-semibold"
                     style={{ color: theme.text }}
@@ -331,10 +449,15 @@ export default function Graph2D({
                   {node.label}
                 </div>
 
-                {/* Importance score dot indicator */}
-                <div className="mt-2 flex items-center gap-1 text-[9px] font-mono text-slate-400">
-                  <span>Imp:</span>
-                  <span className="font-semibold text-slate-200">{node.importance}/10</span>
+                {/* Connection Flow & Importance Stats */}
+                <div className="mt-2.5 pt-2 border-t border-white/5 w-full flex items-center justify-between text-[9px] font-mono text-slate-400">
+                  <span className="flex items-center gap-1 text-[#22D3EE]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#22D3EE] animate-pulse" />
+                    <span>{connCount} {connCount === 1 ? 'link' : 'links'}</span>
+                  </span>
+                  <span className="font-semibold text-slate-200">
+                    ★ {node.importance}/10
+                  </span>
                 </div>
               </div>
             </div>

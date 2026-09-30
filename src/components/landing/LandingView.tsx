@@ -66,23 +66,35 @@ export default function LandingView({
             </div>
           </div>
 
-          <nav className="flex items-center gap-3 sm:gap-4">
+          <nav className="flex items-center gap-2.5 sm:gap-3.5">
             <button
               onClick={onOpenWorkspace}
-              className="text-xs font-medium text-slate-300 hover:text-white px-3 py-2 rounded-lg transition-colors hover:bg-white/5"
+              className="text-xs font-medium text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg transition-colors hover:bg-white/5"
             >
               My Maps
             </button>
             <button
               onClick={onStartDemo}
-              className="text-xs font-medium text-slate-300 hover:text-white px-3 py-2 rounded-lg transition-colors hover:bg-white/5 flex items-center gap-1.5"
+              className="text-xs font-medium text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg transition-colors hover:bg-white/5 flex items-center gap-1.5"
             >
               <Compass className="w-3.5 h-3.5 text-[#22D3EE]" />
-              <span>Explore Demo</span>
+              <span className="hidden sm:inline">Explore Demo</span>
+              <span className="sm:hidden">Demo</span>
             </button>
+            <Link
+              href="/login"
+              className="text-xs font-medium text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg transition-colors hover:bg-white/5 flex items-center gap-1.5 border border-white/5 hover:border-white/20"
+              title={account?.user?.name ? `Signed in as ${account.user.name}` : 'Sign In or Create Account'}
+            >
+              <User className="w-3.5 h-3.5 text-[#22D3EE]" />
+              <span className="max-w-[110px] truncate hidden md:inline">
+                {account?.user?.name || 'Sign In'}
+              </span>
+              <span className="md:hidden">Account</span>
+            </Link>
             <button
               onClick={onOpenUpload}
-              className="group relative inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-[#6C63FF] hover:bg-[#5b51ff] text-white shadow-lg shadow-[#6C63FF]/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="group relative inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#6C63FF] hover:bg-[#5b51ff] text-white shadow-lg shadow-[#6C63FF]/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Upload Chapter</span>

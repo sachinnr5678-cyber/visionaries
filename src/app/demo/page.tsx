@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import WorkspaceView from '@/components/graph/WorkspaceView';
 import { linearAlgebraDemoGraph } from '@/data/demoGraph';
 import UploadModal from '@/components/upload/UploadModal';
@@ -35,6 +35,14 @@ export default function DemoPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-xs text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10"
+            title={account?.user?.name ? `Signed in as ${account.user.name}` : 'Login / Account'}
+          >
+            <User className="w-3.5 h-3.5 text-[#22D3EE]" />
+            <span className="hidden sm:inline">{account?.user?.name || 'Account'}</span>
+          </Link>
           <Link
             href="/"
             className="text-xs text-slate-300 hover:text-white transition-colors flex items-center gap-1"

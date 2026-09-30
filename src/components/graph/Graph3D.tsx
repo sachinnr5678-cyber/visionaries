@@ -23,6 +23,45 @@ const CATEGORY_COLORS: Record<string, string> = {
   optimization: '#FBBF24',
 };
 
+function makeTextSprite(message: string, colorHex: string) {
+  if (typeof document === 'undefined') return new THREE.Sprite();
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return new THREE.Sprite();
+
+  // Glass pill background
+  ctx.fillStyle = 'rgba(11, 16, 32, 0.88)';
+  ctx.beginPath();
+  ctx.roundRect(16, 16, 480, 96, 24);
+  ctx.fill();
+
+  // Outer border with category accent
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = colorHex;
+  ctx.stroke();
+
+  // Text
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 34px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const display = message.length > 22 ? message.slice(0, 20) + '...' : message;
+  ctx.fillText(display, 256, 64);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const spriteMat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+  });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(2.2, 0.55, 1);
+  return sprite;
+}
+
 export default function Graph3D({
   nodes,
   edges,
@@ -90,16 +129,43 @@ export default function Graph3D({
     // Map of node positions
     const nodePositions = new Map<string, THREE.Vector3>();
 
-    // 2. Build 3D Nodes
+    // 2. Build 3D Nodes with Anti-Collision Separation
     nodeMeshMap.current.clear();
+
     nodes.forEach((node) => {
-      // Map 2D x, y and z coordinates into 3D units
-      const posX = (node.x || 0) * 0.016;
-      const posY = -(node.y || 0) * 0.016;
-      const posZ = (node.z || 0) * 0.02;
+      const posX = (node.x || 0) * 0.018;
+      const posY = -(node.y || 0) * 0.018;
+      const posZ = (node.z || 0) * 0.035;
       const pos = new THREE.Vector3(posX, posY, posZ);
       nodePositions.set(node.id, pos);
+    });
 
+    // 3D Anti-Collision Pass: Guarantee spheres never intersect or merge
+    const min3DSep = 1.45;
+    const posEntries = Array.from(nodePositions.entries());
+    for (let step = 0; step < 25; step++) {
+      for (let i = 0; i < posEntries.length; i++) {
+        for (let j = i + 1; j < posEntries.length; j++) {
+          const pA = posEntries[i][1];
+          const pB = posEntries[j][1];
+          const diff = new THREE.Vector3().subVectors(pB, pA);
+          let dist = diff.length();
+          if (dist < 1e-3) {
+            diff.set((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
+            dist = diff.length();
+          }
+          if (dist < min3DSep) {
+            const overlap = (min3DSep - dist) * 0.5;
+            const push = diff.normalize().multiplyScalar(overlap);
+            pA.sub(push);
+            pB.add(push);
+          }
+        }
+      }
+    }
+
+    nodes.forEach((node) => {
+      const pos = nodePositions.get(node.id) || new THREE.Vector3();
       const colorHex = CATEGORY_COLORS[node.category] || '#6C63FF';
       const radius = 0.28 + (node.importance / 10) * 0.22;
 
@@ -130,9 +196,15 @@ export default function Graph3D({
       haloMesh.position.set(0, 0, 0);
       haloMesh.raycast = () => {}; // Never intercept raycaster
       mesh.add(haloMesh);
+
+      // Floating concept name billboard sprite in 3D
+      const textSprite = makeTextSprite(node.label, colorHex);
+      textSprite.position.set(pos.x, pos.y + radius + 0.42, pos.z);
+      textSprite.raycast = () => {}; // Raycaster hits the sphere
+      graphGroup.add(textSprite);
     });
 
-    // 3. Build 3D Edges with Pulsing Lines and Packets
+    // 3. Build 3D Edges with Pulsing Lines and Dual Flow Energy Packets
     const edgeLines: {
       line: THREE.Line;
       material: THREE.LineBasicMaterial;
@@ -140,8 +212,9 @@ export default function Graph3D({
     }[] = [];
 
     // Particle packets that travel along edges
-    const packetGeometry = new THREE.SphereGeometry(0.045, 8, 8);
-    const packetMaterial = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+    const packetGeometry = new THREE.SphereGeometry(0.08, 12, 12);
+    const packetMatCyan = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+    const packetMatViolet = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
     const packetMeshes: {
       mesh: THREE.Mesh;
       p1: THREE.Vector3;
@@ -158,24 +231,36 @@ export default function Graph3D({
       const points = [p1, p2];
       const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
       const lineMat = new THREE.LineBasicMaterial({
-        color: 0x4f46e5,
+        color: 0x6366f1,
         transparent: true,
-        opacity: 0.45,
+        opacity: 0.55,
       });
       const line = new THREE.Line(lineGeo, lineMat);
       graphGroup.add(line);
       edgeLines.push({ line, material: lineMat, edge });
 
-      // Add energy packet mesh
-      const packetMesh = new THREE.Mesh(packetGeometry, packetMaterial);
-      packetMesh.position.copy(p1);
-      graphGroup.add(packetMesh);
+      // Staggered packet 1 (cyan)
+      const packet1 = new THREE.Mesh(packetGeometry, packetMatCyan);
+      packet1.position.copy(p1);
+      graphGroup.add(packet1);
       packetMeshes.push({
-        mesh: packetMesh,
+        mesh: packet1,
         p1,
         p2,
-        speed: 0.006 + Math.random() * 0.008,
+        speed: 0.007 + Math.random() * 0.005,
         progress: Math.random(),
+      });
+
+      // Staggered packet 2 (violet, opposite phase)
+      const packet2 = new THREE.Mesh(packetGeometry, packetMatViolet);
+      packet2.position.copy(p1);
+      graphGroup.add(packet2);
+      packetMeshes.push({
+        mesh: packet2,
+        p1,
+        p2,
+        speed: 0.007 + Math.random() * 0.005,
+        progress: (Math.random() + 0.5) % 1,
       });
     });
 

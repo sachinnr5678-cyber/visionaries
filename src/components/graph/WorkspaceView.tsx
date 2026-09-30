@@ -12,7 +12,9 @@ import {
   Sparkles,
   BookOpen,
   Info,
+  User,
 } from 'lucide-react';
+import Link from 'next/link';
 import {
   KnowledgeGraphData,
   Concept,
@@ -222,6 +224,16 @@ export default function WorkspaceView({
                 </span>
               )}
             </button>
+
+            {/* Account / Login */}
+            <Link
+              href="/login"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1.5"
+              title="Account & Trial Profile"
+            >
+              <User className="w-4 h-4 text-[#22D3EE]" />
+              <span className="hidden xl:inline text-xs font-mono">Account</span>
+            </Link>
 
             {/* Upload Chapter CTA */}
             <button

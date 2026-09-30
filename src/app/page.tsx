@@ -21,6 +21,7 @@ export default function Home() {
   const [viewState, setViewState] = useState<AppViewState>('landing');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [activeGraph, setActiveGraph] = useState<KnowledgeGraphData | null>(null);
+  const [userMaps, setUserMaps] = useState<KnowledgeGraphData[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Real Processing State
@@ -35,6 +36,14 @@ export default function Home() {
 
   useEffect(() => {
     setAccount(TrialService.getAccount());
+    try {
+      const stored = localStorage.getItem('docpulse_user_maps');
+      if (stored) {
+        setUserMaps(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Failed to load saved user maps:', e);
+    }
   }, []);
 
   // Handler for starting REAL analysis from Upload Modal via SSE stream
@@ -150,6 +159,15 @@ export default function Home() {
       setAccount({ ...updatedAccount });
 
       setActiveGraph(receivedGraph);
+      setUserMaps((prev) => {
+        const next = [receivedGraph!, ...prev.filter((m) => m.id !== receivedGraph!.id)];
+        try {
+          localStorage.setItem('docpulse_user_maps', JSON.stringify(next));
+        } catch (e) {
+          console.warn('Failed to persist user maps to localStorage:', e);
+        }
+        return next;
+      });
       setViewState('workspace');
     } catch (err: any) {
       console.error('Real pipeline error:', err);
@@ -204,6 +222,7 @@ export default function Home() {
             onStartDemo={handleStartDemo}
             onOpenUpload={() => setIsUploadOpen(true)}
             onOpenWorkspace={() => setViewState('directory')}
+            account={account}
           />
         )}
 
@@ -237,6 +256,7 @@ export default function Home() {
               if (activeGraph) setViewState('workspace');
               else setViewState('landing');
             }}
+            userMaps={userMaps}
           />
         )}
       </div>
